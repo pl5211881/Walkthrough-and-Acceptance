@@ -61,3 +61,24 @@ npm start
 ```text
 /api/workspace
 ```
+
+### Render Blueprint 部署
+
+仓库已包含 `render.yaml`，可在 Render 中选择 Blueprint 方式导入 GitHub 仓库：
+
+```text
+pl5211881/Walkthrough-and-Acceptance
+```
+
+推荐使用包含 Persistent Disk 的实例。协作数据和上传截图会写入 `DATA_DIR`，默认 Render 配置为：
+
+```text
+/var/data
+```
+
+不建议使用 GitHub Pages 部署本项目，因为 GitHub Pages 只能托管静态文件，无法运行以下后端能力：
+
+- 项目协作保存
+- 图片上传
+- 模型代理
+- 共享链接编辑

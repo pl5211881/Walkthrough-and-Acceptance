@@ -4,7 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const WORKSPACE_FILE = path.join(DATA_DIR, "workspace.json");
 const PORT = Number(process.env.PORT || 4174);
