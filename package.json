@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "check": "node --check server.js && node --check app.js",
+    "sync:public": "mkdir -p public/assets && cp index.html public/index.html && cp app.js public/app.js && cp styles.css public/styles.css && cp assets/design-reference.png public/assets/design-reference.png && cp assets/implementation-target.png public/assets/implementation-target.png"
   },
   "engines": {
     "node": ">=20"

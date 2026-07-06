@@ -1,25 +1,35 @@
 {
-  "services": {
-    "walkthrough-and-acceptance": {
-      "root": ".",
-      "runtime": "node",
-      "entrypoint": "server.js"
-    }
-  },
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "walkthrough-and-acceptance"
-      }
+      "src": "public/**",
+      "use": "@vercel/static"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "walkthrough-and-acceptance"
-      }
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/public/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(?:js|css|png|jpg|jpeg|webp|svg))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
     }
   ]
 }

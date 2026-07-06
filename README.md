@@ -82,3 +82,19 @@ pl5211881/Walkthrough-and-Acceptance
 - 图片上传
 - 模型代理
 - 共享链接编辑
+
+### Vercel 部署
+
+仓库已包含 `vercel.json`。部署前如果修改了 `index.html`、`app.js`、`styles.css` 或默认图片，请先同步静态目录：
+
+```bash
+npm run sync:public
+```
+
+然后执行：
+
+```bash
+vercel deploy --prod
+```
+
+当前 Vercel 部署采用静态前端 + Serverless API。它可以用于在线预览和轻量协作，但 Vercel Serverless 的本地文件系统不适合长期保存协作数据和上传截图；正式团队协作仍建议迁移到外部数据库/对象存储，或使用支持持久化磁盘的部署平台。

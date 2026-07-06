@@ -364,7 +364,7 @@ function serveStatic(req, res) {
   });
 }
 
-const server = http.createServer((req, res) => {
+function handleRequest(req, res) {
   if (req.method === "OPTIONS") {
     sendCorsPreflight(res);
     return;
@@ -398,13 +398,18 @@ const server = http.createServer((req, res) => {
     return;
   }
   sendJson(res, 405, { error: "Method not allowed" });
-});
+}
 
-server.listen(PORT, "0.0.0.0", () => {
-  const addresses = Object.values(os.networkInterfaces())
-    .flat()
-    .filter((item) => item && item.family === "IPv4" && !item.internal)
-    .map((item) => `http://${item.address}:${PORT}/`);
-  console.log(`AI design review server running at http://127.0.0.1:${PORT}/`);
-  if (addresses.length) console.log(`LAN share: ${addresses.join("  ")}`);
-});
+if (require.main === module) {
+  const server = http.createServer(handleRequest);
+  server.listen(PORT, "0.0.0.0", () => {
+    const addresses = Object.values(os.networkInterfaces())
+      .flat()
+      .filter((item) => item && item.family === "IPv4" && !item.internal)
+      .map((item) => `http://${item.address}:${PORT}/`);
+    console.log(`AI design review server running at http://127.0.0.1:${PORT}/`);
+    if (addresses.length) console.log(`LAN share: ${addresses.join("  ")}`);
+  });
+}
+
+module.exports = handleRequest;
