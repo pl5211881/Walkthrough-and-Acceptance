@@ -4,3 +4,4 @@ node_modules/
 data/workspace.json
 data/uploads/*
 !data/uploads/.gitkeep
+.vercel

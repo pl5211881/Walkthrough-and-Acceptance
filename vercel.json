@@ -1,0 +1,25 @@
+{
+  "services": {
+    "walkthrough-and-acceptance": {
+      "root": ".",
+      "runtime": "node",
+      "entrypoint": "server.js"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "walkthrough-and-acceptance"
+      }
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "walkthrough-and-acceptance"
+      }
+    }
+  ]
+}

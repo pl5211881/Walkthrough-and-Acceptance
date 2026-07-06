@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 设计走查核验台</title>
+    <link rel="stylesheet" href="styles.css?v=20260706-server-collab-v1" />
+  </head>
+  <body>
+    <main class="audit-shell">
+      <section class="project-dashboard" id="projectDashboard">
+        <header class="dashboard-hero">
+          <div>
+            <p class="eyebrow">项目看板</p>
+            <h1>走查项目列表</h1>
+            <p class="meta-line">集中查看项目走查成果、修复推进状态和最近更新，进入项目后继续上传页面素材。</p>
+          </div>
+          <button class="primary-button" id="createProjectTop" type="button">新建走查项目</button>
+        </header>
+
+        <section class="dashboard-stats" id="dashboardStats"></section>
+
+        <section class="dashboard-table-card setup-card">
+          <div class="section-headline">
+            <div>
+              <p class="eyebrow">项目列表</p>
+              <h2>全部走查项目</h2>
+            </div>
+          </div>
+          <div class="project-table" id="projectTable"></div>
+          <div class="dashboard-empty-cta" id="dashboardEmptyCta">
+            <p>暂无走查项目，创建第一个项目后即可上传页面并沉淀走查数据。</p>
+            <button class="primary-button" id="createProjectEmpty" type="button">新建走查项目</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="upload-home" id="uploadHome">
+        <header class="upload-hero">
+          <div>
+            <p class="eyebrow">页面上传</p>
+            <h1><input id="projectTitleInput" class="project-title-input" aria-label="项目名称" /></h1>
+            <p class="meta-line" id="homeSummary">上传当前页面的设计稿和开发截图后进入走查工作台。</p>
+          </div>
+          <div class="hero-actions">
+            <button class="line-button" id="backToDashboard" type="button">返回项目看板</button>
+            <button class="line-button" id="openApiConfig" type="button">模型配置</button>
+            <button class="line-button" id="openCurrentPage" type="button">进入走查工作台</button>
+            <button class="primary-button" id="startAiReview" type="button">开始 AI 识别</button>
+          </div>
+        </header>
+
+        <section class="home-workspace">
+          <section class="current-project-panel" id="currentProjectPanel">
+            <article class="setup-card page-upload-card">
+              <div class="section-headline">
+                <div>
+                  <p class="eyebrow">页面资料</p>
+                </div>
+                <span class="config-state" id="apiConfigState">未配置模型</span>
+              </div>
+              <div class="page-tabs upload-page-tabs" id="uploadPageList"></div>
+              <div class="form-grid">
+                <label>
+                  页面名称
+                  <input id="pageNameInput" placeholder="例如：首页 / 订单详情 / 活动页" />
+                </label>
+                <label>
+                  设备尺寸
+                  <input id="pageDeviceInput" placeholder="例如：414×896" />
+                </label>
+              </div>
+              <label>
+                Figma 链接（选填）
+                <input id="pageFigmaInput" placeholder="粘贴 Figma 节点链接" />
+              </label>
+              <label>
+                实现 URL（选填）
+                <input id="pageImplementationUrlInput" placeholder="填写线上地址或截图来源，便于追溯" />
+              </label>
+              <div class="asset-upload-grid">
+                <section class="asset-uploader">
+                  <div>
+                    <p class="eyebrow">设计稿</p>
+                    <h3>设计稿</h3>
+                  </div>
+                  <label class="upload-button">
+                    上传设计稿
+                    <input id="designUploadInput" type="file" accept="image/*" />
+                  </label>
+                  <figure class="asset-preview hidden" id="designUploadPreview">
+                    <img id="designUploadPreviewImage" alt="设计稿预览" />
+                    <iframe id="designUploadPreviewFrame" title="Figma 设计稿预览"></iframe>
+                    <button class="asset-delete-button" id="deleteDesignAsset" type="button" aria-label="删除设计稿"></button>
+                  </figure>
+                </section>
+                <section class="asset-uploader">
+                  <div>
+                    <p class="eyebrow">开发截图</p>
+                    <h3>开发截图</h3>
+                  </div>
+                  <label class="upload-button">
+                    上传开发截图
+                    <input id="implementationUploadInput" type="file" accept="image/*" />
+                  </label>
+                  <figure class="asset-preview hidden" id="implementationUploadPreview">
+                    <img id="implementationUploadPreviewImage" alt="开发截图预览" />
+                    <button class="asset-delete-button" id="deleteImplementationAsset" type="button" aria-label="删除开发截图"></button>
+                  </figure>
+                </section>
+              </div>
+              <div class="setup-actions">
+                <button id="addReviewPage" type="button">新增页面</button>
+                <button id="deleteCurrentPage" class="danger-button" type="button">删除当前页面</button>
+              </div>
+            </article>
+          </section>
+        </section>
+      </section>
+
+      <section class="modal-layer hidden" id="apiConfigModal" aria-hidden="true">
+        <div class="modal-backdrop" id="closeApiConfigBackdrop"></div>
+        <article class="api-modal" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
+          <div class="section-headline">
+            <div>
+              <p class="eyebrow">模型配置</p>
+              <h2 id="apiModalTitle">AI 识别接口</h2>
+            </div>
+            <button id="closeApiConfig" type="button">关闭</button>
+          </div>
+          <span class="config-state" id="apiModalState">未配置</span>
+          <div class="form-grid">
+            <label>
+              模型服务
+              <select id="apiProviderInput">
+                <option value="openai">OpenAI Compatible</option>
+                <option value="custom">自定义网关</option>
+                <option value="doubao">豆包 / 火山</option>
+                <option value="deepseek">DeepSeek</option>
+              </select>
+            </label>
+            <label>
+              模型名称
+              <input id="apiModelInput" placeholder="例如 gpt-4o / gpt-4.1" />
+            </label>
+          </div>
+          <label>
+            Base URL
+            <input id="apiBaseUrlInput" placeholder="https://api.openai.com/v1" />
+          </label>
+          <label>
+            API Key
+            <div class="secret-row">
+              <input id="apiKeyInput" type="password" placeholder="sk-... / Bearer token" />
+              <button id="toggleApiKey" type="button">显示</button>
+            </div>
+          </label>
+          <div class="setup-actions">
+            <button id="saveApiConfig" class="primary-button" type="button">保存配置</button>
+            <button id="testApiConfig" class="line-button" type="button">校验配置</button>
+          </div>
+          <p class="card-helper" id="apiConfigHint">保存配置后，可在上传页点击「开始 AI 识别」调用模型生成走查问题。</p>
+        </article>
+      </section>
+
+      <section class="review-workspace hidden" id="reviewWorkspace">
+      <header class="source-bar">
+        <div class="title-block">
+          <p class="eyebrow" id="workspaceProjectLabel">设计走查工作台</p>
+          <h1 id="workspaceTitle">页面核验</h1>
+          <p class="meta-line" id="taskMeta">414×896 · 待走查</p>
+        </div>
+
+        <section class="page-switcher" aria-label="页面切换">
+          <button id="backToUpload" type="button">返回上传页</button>
+          <div class="page-tabs" id="workspacePageTabs"></div>
+        </section>
+      </header>
+
+      <section class="status-strip" aria-label="任务状态">
+        <article>
+          <span>待 UI 确认</span>
+          <strong id="pendingCount">0</strong>
+        </article>
+        <article>
+          <span>P0 阻断</span>
+          <strong id="p0Count">0</strong>
+        </article>
+        <article>
+          <span>FE 已完成</span>
+          <strong id="feDoneCount">0</strong>
+        </article>
+        <article>
+          <span>已归档</span>
+          <strong id="archivedCount">0</strong>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <aside class="issue-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">优先级表单</p>
+              <h2>问题表单</h2>
+            </div>
+            <div class="export-menu">
+              <button id="exportTasks" type="button">导出问题清单</button>
+              <div class="export-popover hidden" id="exportPopover" aria-label="导出问题清单">
+                <button type="button" data-export-action="share">复制协作链接</button>
+                <button type="button" data-export-action="copy">复制到剪切板</button>
+                <button type="button" data-export-action="html">保存本地 HTML</button>
+                <button type="button" data-export-action="pdf">导出 PDF</button>
+                <button type="button" data-export-action="feishu">飞书任务格式</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <button class="chip active" data-filter="all">全部</button>
+            <button class="chip" data-filter="ai_pending">待 UI 确认</button>
+            <button class="chip" data-filter="manual">人工标注</button>
+            <button class="chip" data-filter="fe_todo">待 FE 修复</button>
+            <button class="chip" data-filter="ui_review">待 UI 复核</button>
+            <button class="chip" data-filter="archived">已归档</button>
+            <button class="chip" data-filter="false_positive">误报</button>
+            <button class="chip" data-filter="accepted_deviation">接受偏差</button>
+          </div>
+
+          <div class="issue-list" id="issueList"></div>
+        </aside>
+
+        <section class="canvas-panel">
+          <div class="canvas-toolbar">
+            <div class="segmented" aria-label="对比模式">
+              <button class="segment active" data-view="side">并排</button>
+              <button class="segment" data-view="overlay">叠图</button>
+            </div>
+            <label class="opacity-control" id="opacityControl">
+              透明度
+              <input id="overlayOpacity" type="range" min="0" max="100" value="55" />
+              <span id="overlayValue">55%</span>
+            </label>
+            <div class="align-control" id="overlayAlignControl" aria-label="叠图位置对齐">
+              <label>
+                X
+                <input id="overlayOffsetX" type="number" min="-120" max="120" step="1" value="0" />
+              </label>
+              <label>
+                Y
+                <input id="overlayOffsetY" type="number" min="-120" max="120" step="1" value="0" />
+              </label>
+              <button id="resetOverlayAlign" type="button">重置</button>
+            </div>
+            <div class="annotation-tool-group" aria-label="标注操作">
+              <button id="toolbarUndoAnnotation" class="manual-only-tool" type="button">撤回</button>
+              <button id="toolbarRedoAnnotation" class="manual-only-tool" type="button">重做</button>
+              <button id="confirmManualSelection" class="manual-confirm-tool" type="button">确认标注</button>
+              <button id="newAnnotation">人工</button>
+            </div>
+          </div>
+
+          <div class="compare-stage" id="compareStage">
+            <article class="shot-card design-shot">
+              <div class="shot-head">
+                <span>设计参考</span>
+                <small id="figmaStatus">Figma 节点已录入</small>
+              </div>
+              <div class="shot-frame" id="designFrame">
+                <img id="designImage" src="assets/design-reference.png" alt="设计参考截图" />
+                <div class="selection-box" id="designSelectionBox"></div>
+                <div class="bbox design-bbox" id="designBbox" data-annotation-target="design">
+                  <span id="designLabel">P0-01</span>
+                  <button class="bbox-resize-handle" type="button" aria-label="调整设计侧标注框尺寸"></button>
+                </div>
+              </div>
+            </article>
+
+            <article class="shot-card implementation-shot">
+              <div class="shot-head">
+                <span>实现目标</span>
+                <small>Production screenshot</small>
+              </div>
+              <div class="shot-frame" id="implementationFrame">
+                <img id="implementationImage" src="assets/implementation-target.png" alt="实现目标截图" />
+                <div class="selection-box" id="implementationSelectionBox"></div>
+                <div class="bbox implementation-bbox" id="implementationBbox" data-annotation-target="implementation">
+                  <span id="implementationLabel">P0-01</span>
+                  <button class="bbox-resize-handle" type="button" aria-label="调整实现侧标注框尺寸"></button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="canvas-hint">
+            <strong>截图核验</strong>
+            <span id="canvasHintText">点击问题或标注点定位证据；拖动标注框可修正位置，拖右下角控制点可修改尺寸；叠图模式可拖动实现图或输入 X/Y 完成手动对齐。</span>
+          </div>
+        </section>
+
+        <aside class="verify-panel">
+          <section class="annotation-controls review-card hidden" id="manualAnnotationPanel">
+            <div class="section-headline">
+              <div>
+                <p class="eyebrow">人工标注</p>
+                <h3>新建走查问题</h3>
+              </div>
+              <span id="annotationUpdatedAt">UI 刚刚</span>
+            </div>
+            <p class="card-helper">框选后填写任务信息，确认标注会创建一条新的人工问题，不会覆盖当前已有问题。</p>
+            <div class="manual-task-form">
+              <div class="form-grid">
+                <label>
+                  优先级
+                  <select id="manualPrioritySelect">
+                    <option value="P0">P0 阻断</option>
+                    <option value="P1">P1 高优先级</option>
+                    <option value="P2">P2 普通</option>
+                    <option value="P3">P3 可优化</option>
+                  </select>
+                </label>
+                <label>
+                  问题类型
+                  <select id="manualTypeSelect">
+                    <option value="Layout">布局结构</option>
+                    <option value="Visual">视觉样式</option>
+                    <option value="Copy">文案内容</option>
+                    <option value="State">组件状态</option>
+                    <option value="Interaction">交互行为</option>
+                    <option value="Accessibility">可用性</option>
+                  </select>
+                </label>
+                <label>
+                  FE 负责人
+                  <select id="manualFeSelect">
+                    <option>前端负责人</option>
+                    <option>组件负责人</option>
+                    <option>页面负责人</option>
+                  </select>
+                </label>
+                <label>
+                  UI 复核人
+                  <select id="manualUiSelect">
+                    <option>设计负责人</option>
+                    <option>体验负责人</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                问题标题
+                <input id="manualTitleInput" placeholder="例如：按钮位置与设计稿不一致" />
+              </label>
+              <label>
+                问题详情
+                <textarea id="manualDetailInput" placeholder="描述当前实现与设计预期的差异，便于 FE 修复和 UI 复核。"></textarea>
+              </label>
+            </div>
+            <div class="bbox-grid">
+              <label>
+                X 位置 %
+                <input id="bboxLeftInput" type="number" min="0" max="100" step="0.5" />
+              </label>
+              <label>
+                Y 位置 %
+                <input id="bboxTopInput" type="number" min="0" max="100" step="0.5" />
+              </label>
+              <label>
+                宽度 %
+                <input id="bboxWidthInput" type="number" min="1" max="100" step="0.5" />
+              </label>
+              <label>
+                高度 %
+                <input id="bboxHeightInput" type="number" min="1" max="100" step="0.5" />
+              </label>
+            </div>
+            <button id="confirmSideAnnotation" class="primary-button full-width-action" type="button">确认标注</button>
+            <details class="advanced-tools">
+              <summary>精确坐标与撤回重做</summary>
+              <div class="inline-actions">
+                <button id="resetBboxSize" type="button">重置尺寸</button>
+                <button id="undoAnnotation" type="button">撤回</button>
+                <button id="redoAnnotation" type="button">重做</button>
+              </div>
+            </details>
+            <p class="undo-caption" id="undoCaption">暂无可撤回操作</p>
+          </section>
+
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">人工核验</p>
+              <h2 id="detailTitle">问题详情</h2>
+            </div>
+            <span class="priority-badge" id="detailPriority">P0</span>
+          </div>
+
+          <section class="review-flow-card" id="reviewFlowCard">
+            <ol class="workflow-strip" id="workflowStrip" aria-label="当前流程状态"></ol>
+
+            <div class="next-action-panel" id="nextActionPanel">
+              <div>
+                <p class="eyebrow">下一步</p>
+                <h3 id="nextActionTitle">下一步操作</h3>
+                <span id="nextActionHint">按当前状态推进核验流程。</span>
+              </div>
+              <div class="next-action-buttons">
+                <button class="primary-button" id="primaryFlowAction" type="button">继续</button>
+                <button class="secondary-flow-button" id="secondaryFlowAction" type="button">退回 FE</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="review-card decision-card">
+            <div class="section-headline">
+              <div>
+                <p class="eyebrow">步骤 1</p>
+                <h3>核验结论</h3>
+              </div>
+            </div>
+            <p class="card-helper">先判断这条识别是否需要进入修复；确认无误时直接使用上方主按钮推进。</p>
+            <div class="decision-grid">
+              <button id="markFalse">误报</button>
+              <button id="acceptDeviation">接受偏差</button>
+              <button id="deleteFinding" type="button">删除问题</button>
+            </div>
+            <details class="advanced-tools">
+              <summary>拆分 / 合并问题</summary>
+              <div class="inline-actions">
+                <button id="splitIssue">拆分</button>
+                <button id="mergeIssue">合并</button>
+              </div>
+            </details>
+          </section>
+
+          <section class="review-card task-info-card">
+            <div class="section-headline">
+              <div>
+                <p class="eyebrow">步骤 2</p>
+                <h3>当前问题</h3>
+              </div>
+            </div>
+            <div class="form-grid">
+            <label>
+              优先级
+              <select id="prioritySelect">
+                <option value="P0">P0 阻断</option>
+                <option value="P1">P1 高优先级</option>
+                <option value="P2">P2 普通</option>
+                <option value="P3">P3 可优化</option>
+              </select>
+            </label>
+            <label>
+              问题类型
+              <select id="typeSelect">
+                <option value="Visual">视觉样式</option>
+                <option value="Layout">布局结构</option>
+                <option value="Copy">文案内容</option>
+                <option value="State">组件状态</option>
+                <option value="Interaction">交互行为</option>
+                <option value="Accessibility">可用性</option>
+              </select>
+            </label>
+            <label>
+              FE 负责人
+              <select id="feSelect">
+                <option>前端负责人</option>
+                <option>组件负责人</option>
+                <option>页面负责人</option>
+              </select>
+            </label>
+            <label>
+              UI 复核人
+              <select id="uiSelect">
+                <option>设计负责人</option>
+                <option>体验负责人</option>
+              </select>
+            </label>
+            </div>
+
+            <label class="title-editor compact-editor">
+              问题标题
+              <input id="titleInput" />
+            </label>
+            <label class="title-editor compact-editor">
+              修复建议
+              <textarea id="recommendationText"></textarea>
+            </label>
+          </section>
+
+          <section class="reason-box review-card">
+            <div class="section-headline">
+              <div>
+                <h3>AI 问题依据</h3>
+              </div>
+            </div>
+            <label>
+              当前实现
+              <textarea id="observedText"></textarea>
+            </label>
+            <label>
+              设计预期
+              <textarea id="expectedText"></textarea>
+            </label>
+          </section>
+
+          <section class="flow-actions hidden-flow-actions" aria-hidden="true">
+            <button id="sendToFe">进入 FE 修复</button>
+            <label class="done-check"><input type="checkbox" id="feDoneCheck" /> FE 已完成</label>
+            <button id="uiPass">UI 复核通过并归档</button>
+            <button id="uiReject">UI 退回 FE</button>
+          </section>
+
+          <section class="comments-box">
+            <h3>评论与历史</h3>
+            <div id="commentList"></div>
+            <div class="comment-input">
+              <input id="commentInput" placeholder="@FE 请按标注区域复查" />
+              <button id="addComment">发送</button>
+            </div>
+          </section>
+        </aside>
+      </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js?v=20260706-server-collab-v1"></script>
+  </body>
+</html>
