@@ -55,6 +55,10 @@ function writeWorkspace(workspace) {
   return payload;
 }
 
+function isReadOnlyFileSystemError(error) {
+  return error?.code === "EROFS" || String(error?.message || error).includes("read-only file system");
+}
+
 function dataUrlToFile(dataUrl = "", preferredId = "") {
   const match = String(dataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) throw new Error("图片数据格式无效，请上传 Data URL 图片");
@@ -82,6 +86,7 @@ async function handleGetWorkspace(req, res) {
   sendJson(res, 200, {
     ok: true,
     workspace: readWorkspace(),
+    storageMode: process.env.VERCEL ? "local-only" : "server",
   });
 }
 
@@ -99,6 +104,15 @@ async function handleSaveWorkspace(req, res) {
       savedAt: saved.serverSavedAt,
     });
   } catch (error) {
+    if (isReadOnlyFileSystemError(error)) {
+      sendJson(res, 200, {
+        ok: false,
+        localOnly: true,
+        storageMode: "local-only",
+        error: "当前部署环境为只读文件系统，协作数据已保留在浏览器本地草稿。",
+      });
+      return;
+    }
     sendJson(res, 500, { error: error.message || "workspace 保存失败" });
   }
 }
@@ -120,6 +134,15 @@ async function handleUploadAsset(req, res) {
       updatedAt: new Date().toLocaleString("zh-CN"),
     });
   } catch (error) {
+    if (isReadOnlyFileSystemError(error)) {
+      sendJson(res, 200, {
+        ok: false,
+        localOnly: true,
+        storageMode: "local-only",
+        error: "当前部署环境无法持久保存图片，请使用本地草稿或接入对象存储。",
+      });
+      return;
+    }
     sendJson(res, 400, { error: error.message || "图片上传失败" });
   }
 }

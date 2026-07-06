@@ -313,12 +313,23 @@ async function deleteAsset(id) {
 }
 
 async function uploadAssetToServer({ id, dataUrl, filename }) {
+  if (state.collaborationDisabled) {
+    const error = new Error("当前环境仅支持本地草稿保存");
+    error.localOnly = true;
+    throw error;
+  }
   const response = await fetch(UPLOAD_ASSET_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, dataUrl, filename }),
   });
   const data = await readJsonResponse(response);
+  if (data.localOnly || data.storageMode === "local-only") {
+    state.collaborationDisabled = true;
+    const error = new Error(data.error || "当前环境仅支持本地草稿保存");
+    error.localOnly = true;
+    throw error;
+  }
   if (!data.ok || !data.url) throw new Error(data.error || "图片上传失败");
   assetCache.set(data.assetId, dataUrl);
   assetCache.set(data.url, dataUrl);
@@ -573,6 +584,7 @@ function stripInlineAssetsFrom(workspace) {
 async function loadServerWorkspace() {
   const response = await fetch(WORKSPACE_API_URL, { cache: "no-store" });
   const data = await readJsonResponse(response);
+  if (data.storageMode === "local-only") state.collaborationDisabled = true;
   return data.workspace || null;
 }
 
@@ -582,7 +594,9 @@ async function saveServerWorkspace(workspace) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ workspace: stripInlineAssetsFrom(workspace) }),
   });
-  return readJsonResponse(response);
+  const data = await readJsonResponse(response);
+  if (data.localOnly || data.storageMode === "local-only") state.collaborationDisabled = true;
+  return data;
 }
 
 async function hydrateWorkspaceFromServer() {
@@ -596,15 +610,20 @@ async function hydrateWorkspaceFromServer() {
     }
     if (localWorkspace.projects.length) {
       workspaceState = normalizeWorkspace(localWorkspace);
-      await saveServerWorkspace(workspaceState);
-      toast("已将本机项目迁移到协作后端");
+      const saved = await saveServerWorkspace(workspaceState);
+      if (saved?.localOnly) {
+        showCollaborationNotice(saved.error || "当前环境仅支持本地草稿保存");
+      } else {
+        toast("已将本机项目迁移到协作后端");
+      }
       return;
     }
     workspaceState = createDefaultWorkspace();
   } catch (error) {
     console.warn("协作后端不可用，继续使用本地草稿。", error);
+    state.collaborationDisabled = true;
     workspaceState = loadWorkspace();
-    toast("协作后端暂不可用，当前使用本地草稿");
+    showCollaborationNotice("协作后端暂不可用，当前使用本地草稿");
   }
 }
 
@@ -674,6 +693,8 @@ const state = {
     title: "",
     detail: "",
   },
+  collaborationDisabled: false,
+  collaborationNoticeShown: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -790,12 +811,13 @@ function saveWorkspace(options = {}) {
   } catch {
     if (!options.silent) toast("项目数据保存失败，请删除部分页面或问题后重试");
   }
-  if (options.localOnly) return;
+  if (options.localOnly || state.collaborationDisabled) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveWorkspaceNow(options).catch((error) => {
       console.warn("协作后端保存失败", error);
-      if (!options.silent) toast("协作保存失败，已保留本地草稿");
+      state.collaborationDisabled = true;
+      if (!options.silent) showCollaborationNotice("协作保存不可用，已保留本地草稿");
     });
   }, options.immediate ? 0 : 350);
 }
@@ -807,7 +829,10 @@ async function saveWorkspaceNow(options = {}) {
   }
   saveInFlight = true;
   try {
-    await saveServerWorkspace(workspaceState);
+    const data = await saveServerWorkspace(workspaceState);
+    if (data?.localOnly) {
+      showCollaborationNotice(data.error || "当前环境仅支持本地草稿保存");
+    }
   } finally {
     saveInFlight = false;
   }
@@ -815,6 +840,12 @@ async function saveWorkspaceNow(options = {}) {
     pendingSave = false;
     await saveWorkspaceNow({ ...options, silent: true });
   }
+}
+
+function showCollaborationNotice(message) {
+  if (state.collaborationNoticeShown) return;
+  state.collaborationNoticeShown = true;
+  toast(message);
 }
 
 function uploadMeta(fileName, updatedAt) {
@@ -2481,7 +2512,7 @@ $("#designUploadInput").addEventListener("change", (event) => {
         });
         event.target.value = "";
         render();
-        toast("协作后端不可用，设计稿已暂存本地");
+        showCollaborationNotice("当前环境仅支持本地草稿，图片已暂存本机浏览器");
       } catch {
         toast("图片保存失败，请检查浏览器存储权限");
       }
@@ -2523,7 +2554,7 @@ $("#implementationUploadInput").addEventListener("change", (event) => {
         });
         event.target.value = "";
         render();
-        toast("协作后端不可用，开发截图已暂存本地");
+        showCollaborationNotice("当前环境仅支持本地草稿，图片已暂存本机浏览器");
       } catch {
         toast("图片保存失败，请检查浏览器存储权限");
       }
