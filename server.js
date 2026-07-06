@@ -232,6 +232,15 @@ function humanizeAiError(message = "") {
   }
   const normalized = String(text).toLowerCase();
   if (
+    normalized.includes("fetch failed")
+    || normalized.includes("enotfound")
+    || normalized.includes("econnrefused")
+    || normalized.includes("etimedout")
+    || normalized.includes("network")
+  ) {
+    return "当前部署环境无法访问该模型 Base URL。若本地可用但线上失败，通常是模型网关为内网地址、公司网络地址或限制了云服务出口访问；请改用公网可访问的模型网关，或将本工具部署到能访问该网关的内网环境。";
+  }
+  if (
     normalized.includes("unknown variant `image_url`")
     || (normalized.includes("image_url") && normalized.includes("expected `text`"))
     || (normalized.includes("image_url") && normalized.includes("expected text"))
