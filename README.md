@@ -2,6 +2,30 @@
 
 AI 设计走查与验收协作工作台。支持上传设计稿和开发截图、调用视觉模型识别问题、人工标注、FE 修复流转、UI 复核归档，以及通过后端共享同一个项目状态。
 
+## 当前访问地址
+
+| 类型 | 地址 | 说明 |
+| --- | --- | --- |
+| Vercel 线上预览 | https://walkthrough-and-acceptance.vercel.app | 已部署，可访问页面与 Serverless API |
+| Vercel 部署详情 | https://vercel.com/hl5211881/walkthrough-and-acceptance | 查看部署记录、日志和域名 |
+| GitHub 仓库 | https://github.com/pl5211881/Walkthrough-and-Acceptance | 项目源码仓库 |
+| 当前开发分支 | https://github.com/pl5211881/Walkthrough-and-Acceptance/tree/codex/server-collaboration-deploy | 当前已推送分支 |
+| 本地服务 | http://127.0.0.1:4175/ | 推荐完整体验：可本地保存、上传图片、访问内网模型 |
+| 健康检查 | https://walkthrough-and-acceptance.vercel.app/api/workspace | 线上 API 检查入口 |
+
+## 当前部署状态
+
+| 能力 | 本地 / 内网部署 | Vercel 线上 |
+| --- | --- | --- |
+| 页面访问 | 支持 | 支持 |
+| 项目数据保存 | 支持，写入 `data/workspace.json` | 仅浏览器本地草稿，Vercel 文件系统只读 |
+| 图片上传保存 | 支持，写入 `data/uploads/` | 仅浏览器本地草稿，需接对象存储才可共享 |
+| 协作链接编辑 | 局域网/内网可共享同一份服务端数据 | 页面可打开，但数据不会跨浏览器长期共享 |
+| 内网模型网关 | 支持访问公司内网/API 网关 | 不支持访问 `baidu-int.com` 等内网/受限地址 |
+| 公网模型网关 | 支持 | 支持，取决于 API Key 和模型视觉能力 |
+
+> 说明：当前 Vercel 部署主要用于在线预览。若要正式多人协作，请接入外部数据库/对象存储，或部署到支持持久化磁盘且能访问公司内网模型网关的环境。
+
 ## 本地启动
 
 ```bash
