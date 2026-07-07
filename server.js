@@ -255,6 +255,13 @@ function humanizeAiError(message = "") {
   }
   const normalized = String(text).toLowerCase();
   if (
+    normalized.includes("request entity too large")
+    || normalized.includes("payload_too_large")
+    || normalized.includes("function_payload_too_large")
+  ) {
+    return "AI 识别请求体过大。请压缩截图、降低截图尺寸，或改用本地/内网部署识别大图。";
+  }
+  if (
     normalized.includes("fetch failed")
     || normalized.includes("enotfound")
     || normalized.includes("econnrefused")

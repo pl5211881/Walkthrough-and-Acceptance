@@ -38,6 +38,8 @@ const AI_VISION_TEST_URL = `${SERVER_ORIGIN}/api/test-vision`;
 const WORKSPACE_API_URL = `${SERVER_ORIGIN}/api/workspace`;
 const UPLOAD_ASSET_API_URL = `${SERVER_ORIGIN}/api/upload-asset`;
 const DELETE_ASSET_API_URL = `${SERVER_ORIGIN}/api/delete-asset`;
+const AI_IMAGE_MAX_EDGE = 1200;
+const AI_IMAGE_MAX_BYTES = 900 * 1024;
 
 const seedFindings = [
   {
@@ -386,6 +388,42 @@ async function pageAssetDataUrl(page, kind) {
   const url = kind === "design" ? page?.designImageUrl : page?.implementationImageUrl;
   if (url) return urlToDataUrl(url);
   return getAsset(pageAssetId(page, kind));
+}
+
+function dataUrlByteSize(dataUrl = "") {
+  const base64 = String(dataUrl).split(",")[1] || "";
+  return Math.ceil((base64.length * 3) / 4);
+}
+
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("图片读取失败"));
+    image.src = dataUrl;
+  });
+}
+
+async function prepareAiImageDataUrl(dataUrl) {
+  if (!dataUrl) return "";
+  const inputSize = dataUrlByteSize(dataUrl);
+  if (inputSize <= AI_IMAGE_MAX_BYTES && !dataUrl.startsWith("data:image/png")) return dataUrl;
+  const image = await loadImageFromDataUrl(dataUrl);
+  const scale = Math.min(1, AI_IMAGE_MAX_EDGE / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d", { alpha: false });
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const qualities = [0.82, 0.72, 0.62, 0.52, 0.42];
+  let output = canvas.toDataURL("image/jpeg", qualities[0]);
+  for (const quality of qualities) {
+    output = canvas.toDataURL("image/jpeg", quality);
+    if (dataUrlByteSize(output) <= AI_IMAGE_MAX_BYTES) break;
+  }
+  return output;
 }
 
 function pageHasDesignAsset(page) {
@@ -2225,10 +2263,19 @@ async function startAiReview() {
     toast("未找到已上传图片，请重新上传设计稿和开发截图");
     return;
   }
+  try {
+    [designImageDataUrl, implementationImageDataUrl] = await Promise.all([
+      prepareAiImageDataUrl(designImageDataUrl),
+      prepareAiImageDataUrl(implementationImageDataUrl),
+    ]);
+  } catch {
+    toast("截图压缩失败，请重新上传 PNG/JPG/WebP 图片");
+    return;
+  }
   const button = $("#startAiReview");
   button.disabled = true;
   button.textContent = "识别中...";
-  toast("正在调用模型识别走查问题");
+  toast("正在压缩截图并调用模型识别");
   try {
     const data = await requestAiReview(config, page, designImageDataUrl, implementationImageDataUrl);
     const content = modelContentFromResponse(data);
